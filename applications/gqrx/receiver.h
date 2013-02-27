@@ -228,11 +228,7 @@ private:
     sniffer_f_sptr            sniffer;    /*!< Sample sniffer for data decoders. */
     resampler_ff_sptr         sniffer_rr; /*!< Sniffer resampler. */
 
-#ifdef WITH_PULSEAUDIO
-    pa_sink_sptr              audio_snk;  /*!< Pulse audio sink. */
-#else
-    audio_sink::sptr          audio_snk;  /*!< gr audio sink */
-#endif
+    gr_basic_block_sptr       audio_snk;  /*!< Audio sink. */
 };
 
 #endif // RECEIVER_H

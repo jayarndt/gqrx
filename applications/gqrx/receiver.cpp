@@ -34,9 +34,10 @@
 
 #ifdef WITH_PULSEAUDIO //pafix
 #include "pulseaudio/pa_sink.h"
-#else
-#include <gr_audio_sink.h>
 #endif
+
+#include <gr_audio_sink.h>
+
 
 /*! \brief Public contructor.
  *  \param input_device Input device specifier.
@@ -83,7 +84,11 @@ receiver::receiver(const std::string input_device, const std::string audio_devic
     audio_gain1 = gr_make_multiply_const_ff(0.1);
 
 #ifdef WITH_PULSEAUDIO //pafix
-    audio_snk = make_pa_sink(audio_device, d_audio_rate, "GQRX", "Audio output");
+    pa_sink_sptr pa_snk;
+    audio_snk = pa_snk = make_pa_sink(audio_device, d_audio_rate, "GQRX", "Audio output");
+
+    if (!pa_snk->is_connected())
+        audio_snk = audio_make_sink(d_audio_rate, audio_device, true);
 #else
     audio_snk = audio_make_sink(d_audio_rate, audio_device, true);
 #endif
@@ -189,7 +194,11 @@ void receiver::set_output_device(const std::string device)
     audio_snk.reset();
 
 #ifdef WITH_PULSEAUDIO
-    audio_snk = make_pa_sink(device, d_audio_rate); // FIXME: does this keep app and stream name?
+    pa_sink_sptr pa_snk;
+    audio_snk = pa_snk = make_pa_sink(device, d_audio_rate); // FIXME: does this keep app and stream name?
+
+    if (!pa_snk->is_connected())
+        audio_snk = audio_make_sink(d_audio_rate, device, true);
 #else
     audio_snk = audio_make_sink(d_audio_rate, device, true);
 #endif

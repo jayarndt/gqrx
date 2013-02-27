@@ -62,9 +62,6 @@ int pa_device_list::populate_device_list()
     pa_mlapi = pa_mainloop_get_api(pa_ml);
     pa_ctx = pa_context_new(pa_mlapi, "test");
 
-    // Connect to the pulseaudio server
-    pa_context_connect(pa_ctx, NULL, PA_CONTEXT_NOFLAGS , NULL);
-
     // This function defines a callback so the server will tell us it's state.
     // Our callback will wait for the state to be ready.  The callback will
     // modify the variable to 1 so we know when we have a connection and it's
@@ -72,6 +69,8 @@ int pa_device_list::populate_device_list()
     // If there's an error, the callback will set pa_ready to 2
     pa_context_set_state_callback(pa_ctx, pa_state_cb, &pa_ready);
 
+    // Connect to the pulseaudio server
+    pa_context_connect(pa_ctx, NULL, PA_CONTEXT_NOFLAGS , NULL);
 
     // Now we'll enter into an infinite loop until we get the data we receive
     // or if there's an error

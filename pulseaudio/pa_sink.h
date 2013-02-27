@@ -61,6 +61,8 @@ public:
 
     void select_device(string device_name);
 
+    bool is_connected() {return d_pasink != NULL;}
+
 private:
     pa_simple *d_pasink;    /*! The pulseaudio object. */
     string d_stream_name;   /*! Descriptive name of the stream. */
