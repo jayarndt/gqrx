@@ -39,6 +39,17 @@
 #include <gr_audio_sink.h>
 
 
+const struct rx_demod_table_t receiver::rx_demod_table[RX_DEMOD_END] = {
+/*    chain           demod                      */
+    { RX_CHAIN_NONE,  0                          }, /* RX_DEMOD_OFF    = 0 */
+    { RX_CHAIN_NBRX,  nbrx::NBRX_DEMOD_NONE      }, /* RX_DEMOD_NONE   = 1 */
+    { RX_CHAIN_NBRX,  nbrx::NBRX_DEMOD_AM        }, /* RX_DEMOD_AM     = 2 */
+    { RX_CHAIN_NBRX,  nbrx::NBRX_DEMOD_FM        }, /* RX_DEMOD_NFM    = 3 */
+    { RX_CHAIN_WFMRX, wfmrx::WFMRX_DEMOD_MONO    }, /* RX_DEMOD_WFM_M  = 4 */
+    { RX_CHAIN_WFMRX, wfmrx::WFMRX_DEMOD_STEREO  }, /* RX_DEMOD_WFM_S  = 5 */
+    { RX_CHAIN_NBRX,  nbrx::NBRX_DEMOD_SSB       }  /* RX_DEMOD_SSB    = 6 */
+};
+
 /*! \brief Public contructor.
  *  \param input_device Input device specifier.
  *  \param audio_device Audio output device specifier,
@@ -593,8 +604,6 @@ receiver::status receiver::set_agc_manual_gain(int gain)
 receiver::status receiver::set_demod(rx_demod demod)
 {
     bool needs_restart = d_running;
-    bool wide_fm = (d_demod == RX_DEMOD_WFM_M) || (d_demod == RX_DEMOD_WFM_S);
-    status ret = STATUS_OK;
 
     // Allow reconf using same demod to provide a workaround
     // for the "jerky streaming" we may experience with rtl
@@ -602,81 +611,29 @@ receiver::status receiver::set_demod(rx_demod demod)
     //if (demod == d_demod)
     //    return ret;
 
+    if (demod < 0 || demod >= RX_DEMOD_END)
+        return STATUS_ERROR;
+
     if (d_running)
         stop();
 
-    switch (demod)
+    // Change chain if needed
+    if (rx_demod_table[d_demod].chain != rx_demod_table[demod].chain)
     {
-    case RX_DEMOD_OFF:
         tb->disconnect_all();
-        connect_all(RX_CHAIN_NONE);
-        break;
-
-    case RX_DEMOD_NONE:
-        if ((d_demod == RX_DEMOD_OFF) || wide_fm)
-        {
-            tb->disconnect_all();
-            connect_all(RX_CHAIN_NBRX);
-        }
-        rx->set_demod(nbrx::NBRX_DEMOD_NONE);
-        break;
-
-    case RX_DEMOD_AM:
-        if ((d_demod == RX_DEMOD_OFF) || wide_fm)
-        {
-            tb->disconnect_all();
-            connect_all(RX_CHAIN_NBRX);
-        }
-        rx->set_demod(nbrx::NBRX_DEMOD_AM);
-        break;
-
-    case RX_DEMOD_NFM:
-        if ((d_demod == RX_DEMOD_OFF) || wide_fm)
-        {
-            tb->disconnect_all();
-            connect_all(RX_CHAIN_NBRX);
-        }
-        rx->set_demod(nbrx::NBRX_DEMOD_FM);
-        break;
-
-    case RX_DEMOD_WFM_M:
-        if (!wide_fm)
-        {
-            tb->disconnect_all();
-            connect_all(RX_CHAIN_WFMRX);
-        }
-        rx->set_demod(wfmrx::WFMRX_DEMOD_MONO);
-        break;
-
-    case RX_DEMOD_WFM_S:
-        if (!wide_fm)
-        {
-            tb->disconnect_all();
-            connect_all(RX_CHAIN_WFMRX);
-        }
-        rx->set_demod(wfmrx::WFMRX_DEMOD_STEREO);
-        break;
-
-    case RX_DEMOD_SSB:
-        if ((d_demod == RX_DEMOD_OFF) || wide_fm)
-        {
-            tb->disconnect_all();
-            connect_all(RX_CHAIN_NBRX);
-        }
-        rx->set_demod(nbrx::NBRX_DEMOD_SSB);
-        break;
-
-    default:
-        ret = STATUS_ERROR;
-        break;
+        connect_all(rx_demod_table[demod].chain);
     }
+
+    // Set the chain specific demod
+    if (demod != RX_DEMOD_OFF)
+        rx->set_demod(rx_demod_table[demod].demod);
 
     d_demod = demod;
 
     if (needs_restart)
         start();
 
-    return ret;
+    return STATUS_OK;
 }
 
 /*! \brief Set maximum deviation of the FM demodulator.

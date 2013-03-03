@@ -81,7 +81,8 @@ public:
         RX_DEMOD_NFM   = 3,  /*!< Frequency modulation. */
         RX_DEMOD_WFM_M = 4,  /*!< Frequency modulation (wide, mono). */
         RX_DEMOD_WFM_S = 5,  /*!< Frequency modulation (wide, stereo). */
-        RX_DEMOD_SSB   = 6   /*!< Single Side Band. */
+        RX_DEMOD_SSB   = 6,  /*!< Single Side Band. */
+        RX_DEMOD_END   = 7
     };
 
     /*! \brief Supported receiver types. */
@@ -98,6 +99,7 @@ public:
         FILTER_SHAPE_SHARP = 2   /*!< Sharp: Transition band is TBD of width. */
     };
 
+    static const struct rx_demod_table_t rx_demod_table[RX_DEMOD_END];
 
     receiver(const std::string input_device="", const std::string audio_device="");
     ~receiver();
@@ -230,5 +232,11 @@ private:
 
     gr_basic_block_sptr       audio_snk;  /*!< Audio sink. */
 };
+
+struct rx_demod_table_t {
+        receiver::rx_chain chain;
+        short demod;
+};
+
 
 #endif // RECEIVER_H
