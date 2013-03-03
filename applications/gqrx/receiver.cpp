@@ -198,6 +198,8 @@ void receiver::set_output_device(const std::string device)
         return;
     }
 
+    output_devstr = device;
+
     tb->lock();
 
     tb->disconnect(audio_gain0, 0, audio_snk, 0);
@@ -206,7 +208,7 @@ void receiver::set_output_device(const std::string device)
 
 #ifdef WITH_PULSEAUDIO
     pa_sink_sptr pa_snk;
-    audio_snk = pa_snk = make_pa_sink(device, d_audio_rate); // FIXME: does this keep app and stream name?
+    audio_snk = pa_snk = make_pa_sink(device, d_audio_rate);
 
     if (!pa_snk->is_connected())
         audio_snk = audio_make_sink(d_audio_rate, device, true);
