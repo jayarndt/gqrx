@@ -1040,4 +1040,10 @@ void receiver::connect_all(rx_chain type)
         break;
     }
 
+    if (d_sniffer_active)
+    {
+        tb->connect(rx, 0, sniffer_rr, 0);
+        tb->connect(sniffer_rr, 0, sniffer, 0);
+    }
+
 }
