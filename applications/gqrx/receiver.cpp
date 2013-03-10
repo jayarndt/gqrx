@@ -82,7 +82,6 @@ receiver::receiver(const std::string input_device, const std::string audio_devic
         src = osmosdr_make_source_c(input_device);
     }
 
-    rx = make_nbrx(d_input_rate, d_audio_rate);
     lo = gr_make_sig_source_c(d_input_rate, GR_SIN_WAVE, 0.0, 1.0);
     mixer = gr_make_multiply_cc();
 
@@ -111,7 +110,7 @@ receiver::receiver(const std::string input_device, const std::string audio_devic
     sniffer = make_sniffer_f();
     /* sniffer_rr is created at each activation. */
 
-    set_demod(RX_DEMOD_NFM);
+    connect_all(RX_CHAIN_NONE);
 }
 
 
@@ -241,7 +240,8 @@ double receiver::set_input_rate(double rate)
         tb->lock();
         d_input_rate = src->set_sample_rate(rate);
         dc_corr->set_sample_rate(d_input_rate);
-        rx->set_quad_rate(d_input_rate);
+        if (rx)
+            rx->set_quad_rate(d_input_rate);
         lo->set_sampling_freq(d_input_rate);
         tb->unlock();
     }
@@ -447,7 +447,8 @@ receiver::status receiver::set_filter(double low, double high, filter_shape shap
 
     }
 
-    rx->set_filter(low, high, trans_width);
+    if (rx)
+        rx->set_filter(low, high, trans_width);
 
     return STATUS_OK;
 }
@@ -487,7 +488,10 @@ receiver::status receiver::set_freq_corr(int ppm)
  */
 float receiver::get_signal_pwr(bool dbfs)
 {
-    return rx->get_signal_level(dbfs);
+    if (rx)
+        return rx->get_signal_level(dbfs);
+    else
+        return dbfs ? -200.0 : 0.0;
 }
 
 /*! \brief Set new FFT size. */
@@ -510,7 +514,7 @@ void receiver::get_audio_fft_data(std::complex<float>* fftPoints, unsigned int &
 
 receiver::status receiver::set_nb_on(int nbid, bool on)
 {
-    if (rx->has_nb())
+    if (rx && rx->has_nb())
         rx->set_nb_on(nbid, on);
 
     return STATUS_OK; // FIXME
@@ -518,7 +522,7 @@ receiver::status receiver::set_nb_on(int nbid, bool on)
 
 receiver::status receiver::set_nb_threshold(int nbid, float threshold)
 {
-    if (rx->has_nb())
+    if (rx && rx->has_nb())
         rx->set_nb_threshold(nbid, threshold);
 
     return STATUS_OK; // FIXME
@@ -530,7 +534,7 @@ receiver::status receiver::set_nb_threshold(int nbid, float threshold)
  */
 receiver::status receiver::set_sql_level(double level_db)
 {
-    if (rx->has_sql())
+    if (rx && rx->has_sql())
         rx->set_sql_level(level_db);
 
     return STATUS_OK; // FIXME
@@ -540,7 +544,7 @@ receiver::status receiver::set_sql_level(double level_db)
 /*! \brief Set squelch alpha */
 receiver::status receiver::set_sql_alpha(double alpha)
 {
-    if (rx->has_sql())
+    if (rx && rx->has_sql())
         rx->set_sql_alpha(alpha);
 
     return STATUS_OK; // FIXME
@@ -552,7 +556,7 @@ receiver::status receiver::set_sql_alpha(double alpha)
  */
 receiver::status receiver::set_agc_on(bool agc_on)
 {
-    if (rx->has_agc())
+    if (rx && rx->has_agc())
         rx->set_agc_on(agc_on);
 
     return STATUS_OK; // FIXME
@@ -561,7 +565,7 @@ receiver::status receiver::set_agc_on(bool agc_on)
 /*! \brief Enable/disable AGC hang. */
 receiver::status receiver::set_agc_hang(bool use_hang)
 {
-    if (rx->has_agc())
+    if (rx && rx->has_agc())
         rx->set_agc_hang(use_hang);
 
     return STATUS_OK; // FIXME
@@ -570,7 +574,7 @@ receiver::status receiver::set_agc_hang(bool use_hang)
 /*! \brief Set AGC threshold. */
 receiver::status receiver::set_agc_threshold(int threshold)
 {
-    if (rx->has_agc())
+    if (rx && rx->has_agc())
         rx->set_agc_threshold(threshold);
 
     return STATUS_OK; // FIXME
@@ -579,7 +583,7 @@ receiver::status receiver::set_agc_threshold(int threshold)
 /*! \brief Set AGC slope. */
 receiver::status receiver::set_agc_slope(int slope)
 {
-    if (rx->has_agc())
+    if (rx && rx->has_agc())
         rx->set_agc_slope(slope);
 
     return STATUS_OK; // FIXME
@@ -588,7 +592,7 @@ receiver::status receiver::set_agc_slope(int slope)
 /*! \brief Set AGC decay time. */
 receiver::status receiver::set_agc_decay(int decay_ms)
 {
-    if (rx->has_agc())
+    if (rx && rx->has_agc())
         rx->set_agc_decay(decay_ms);
 
     return STATUS_OK; // FIXME
@@ -597,7 +601,7 @@ receiver::status receiver::set_agc_decay(int decay_ms)
 /*! \brief Set fixed gain used when AGC is OFF. */
 receiver::status receiver::set_agc_manual_gain(int gain)
 {
-    if (rx->has_agc())
+    if (rx && rx->has_agc())
         rx->set_agc_manual_gain(gain);
 
     return STATUS_OK; // FIXME
@@ -627,7 +631,7 @@ receiver::status receiver::set_demod(rx_demod demod)
     }
 
     // Set the chain specific demod
-    if (demod != RX_DEMOD_OFF)
+    if (rx)
         rx->set_demod(rx_demod_table[demod].demod);
 
     d_demod = demod;
@@ -643,7 +647,7 @@ receiver::status receiver::set_demod(rx_demod demod)
  */
 receiver::status receiver::set_fm_maxdev(float maxdev_hz)
 {
-    if (rx->has_fm())
+    if (rx && rx->has_fm())
         rx->set_fm_maxdev(maxdev_hz);
 
     return STATUS_OK;
@@ -651,7 +655,7 @@ receiver::status receiver::set_fm_maxdev(float maxdev_hz)
 
 receiver::status receiver::set_fm_deemph(double tau)
 {
-    if (rx->has_fm())
+    if (rx && rx->has_fm())
         rx->set_fm_deemph(tau);
 
     return STATUS_OK;
@@ -659,7 +663,7 @@ receiver::status receiver::set_fm_deemph(double tau)
 
 receiver::status receiver::set_am_dcr(bool enabled)
 {
-    if (rx->has_am())
+    if (rx && rx->has_am())
         rx->set_am_dcr(enabled);
 
     return STATUS_OK;
@@ -927,8 +931,11 @@ receiver::status receiver::start_sniffer(unsigned int samprate, int buffsize)
     sniffer->set_buffer_size(buffsize);
     sniffer_rr = make_resampler_ff((float)samprate/(float)d_audio_rate);
     tb->lock();
-    tb->connect(rx, 0, sniffer_rr, 0);
-    tb->connect(sniffer_rr, 0, sniffer, 0);
+    if (rx)
+    {
+        tb->connect(rx, 0, sniffer_rr, 0);
+        tb->connect(sniffer_rr, 0, sniffer, 0);
+    }
     tb->unlock();
     d_sniffer_active = true;
 
@@ -945,8 +952,10 @@ receiver::status receiver::stop_sniffer()
     }
 
     tb->lock();
-    tb->disconnect(rx, 0, sniffer_rr, 0);
-    tb->disconnect(sniffer_rr, 0, sniffer, 0);
+    if (rx) {
+        tb->disconnect(rx, 0, sniffer_rr, 0);
+        tb->disconnect(sniffer_rr, 0, sniffer, 0);
+    }
     tb->unlock();
     d_sniffer_active = false;
 
@@ -970,6 +979,7 @@ void receiver::connect_all(rx_chain type)
     switch (type)
     {
     case RX_CHAIN_NONE:
+        rx.reset();
         tb->connect(src, 0, iq_swap, 0);
         if (d_dc_cancel)
         {
@@ -983,7 +993,7 @@ void receiver::connect_all(rx_chain type)
         break;
 
     case RX_CHAIN_NBRX:
-        if (rx->name() != "NBRX")
+        if (!rx || rx->name() != "NBRX")
         {
             rx.reset();
             rx = make_nbrx(d_input_rate, d_audio_rate);
@@ -1010,7 +1020,7 @@ void receiver::connect_all(rx_chain type)
         break;
 
     case RX_CHAIN_WFMRX:
-        if (rx->name() != "WFMRX")
+        if (!rx || rx->name() != "WFMRX")
         {
             rx.reset();
             rx = make_wfmrx(d_input_rate, d_audio_rate);
@@ -1040,7 +1050,7 @@ void receiver::connect_all(rx_chain type)
         break;
     }
 
-    if (d_sniffer_active)
+    if (rx && d_sniffer_active)
     {
         tb->connect(rx, 0, sniffer_rr, 0);
         tb->connect(sniffer_rr, 0, sniffer, 0);
