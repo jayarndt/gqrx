@@ -153,10 +153,8 @@ unix {
 
     contains(AUDIO_BACKEND, pulse): {
         PKGCONFIG += libpulse libpulse-simple
-    } else {
-        PKGCONFIG += gnuradio-audio
     }
-    PKGCONFIG += gnuradio-core gnuradio-osmosdr
+    PKGCONFIG += gnuradio-core gnuradio-osmosdr gnuradio-audio
 }
 
 unix:!macx {
